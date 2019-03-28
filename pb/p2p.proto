@@ -1,0 +1,34 @@
+syntax = "proto3";
+package pb;
+
+// a resource represents data to be requested, replicated and exchanged by the
+// peers in the network. a resource contains a set of all the blocks that are
+// the data itself.
+message Resource {
+	string id = 1;
+  int32 size = 2;
+	repeated Block blocks = 3;
+}
+
+// a block is a "piece" of a resource. blocks in a given resource must have the
+// same size (apart from the last one)
+message Block {
+ 	string resource_id = 1;
+ 	int32 id = 2;
+	int32 size = 3;
+}
+
+// a peer block is a tuple containing information for a peer to fetch and
+// validate a block from a resources stored in a given peer.
+message PeerBlockRequest {
+	string resource_id = 1;
+	string block_id = 2;
+	string addr = 3;
+	string peer_pubkey = 4;
+}
+
+// a replication manifest is a lkst of peer block requests which must be issued
+// by the 
+message ReplicationManifest {
+	repeated PeerBlockRequest block_req = 1;
+}
