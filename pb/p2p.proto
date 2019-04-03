@@ -1,5 +1,28 @@
 syntax = "proto3";
-package pb;
+
+package pstashio;
+
+service Scheduler {
+	rpc RegisterPeer (RegisterPeerRequest) returns (RegisterPeerResponse) {} 
+	rpc GetProviders (GetProvidersRequest) returns (GetProvidersResponse) {}
+}
+
+message RegisterPeerRequest {
+	string location = 1;
+	repeated Block cached_blocks = 2;
+}
+
+message RegisterPeerResponse {
+	string status = 1;
+}
+
+message GetProvidersRequest {
+	string resource_id = 1;
+}
+
+message GetProvidersResponse {
+	ReplicationManifest manifest = 1;
+}
 
 // a resource represents data to be requested, replicated and exchanged by the
 // peers in the network. a resource contains a set of all the blocks that are
@@ -27,8 +50,7 @@ message PeerBlockRequest {
 	string peer_pubkey = 4;
 }
 
-// a replication manifest is a lkst of peer block requests which must be issued
-// by the 
+// a replication manifest is a list of peer block requests which must be issued
 message ReplicationManifest {
 	repeated PeerBlockRequest block_req = 1;
 }

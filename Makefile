@@ -1,2 +1,2 @@
 build:
-	protoc -I=. --go_out=. ./pb/p2p.proto
+	protoc -I=. ./pb/p2p.proto --go_out=plugins=grpc:./
