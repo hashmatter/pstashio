@@ -10,12 +10,14 @@ import (
 
 const (
 	serverAddr = "localhost:8080"
+	clientAddr = "127.0.0.1"
 )
 
 type Peer struct {
-	client     pb.SchedulerClient
-	conn       *grpc.ClientConn
-	serverAddr string
+	client       pb.SchedulerClient
+	conn         *grpc.ClientConn
+	serverAddr   string
+	cachedBlocks []*pb.Block
 }
 
 func NewPeer(sAddr string) (*Peer, error) {
@@ -46,11 +48,14 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	req := pb.RegisterPeerRequest{}
+	req := pb.RegisterPeerRequest{
+		Ip:           clientAddr,
+		CachedBlocks: peer.cachedBlocks,
+	}
 	res, err := peer.client.RegisterPeer(ctx, &req)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Println(res)
+	log.Println(res.Status)
 }

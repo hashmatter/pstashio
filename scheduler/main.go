@@ -15,8 +15,8 @@ const (
 type server struct{}
 
 func (*server) RegisterPeer(ctx context.Context, req *pb.RegisterPeerRequest) (*pb.RegisterPeerResponse, error) {
-	log.Println("Received", req)
-	return &pb.RegisterPeerResponse{}, nil
+	log.Println("Received peer request: ", req)
+	return &pb.RegisterPeerResponse{Status: "OK"}, nil
 }
 
 func (*server) GetProviders(ctx context.Context, req *pb.GetProvidersRequest) (*pb.GetProvidersResponse, error) {

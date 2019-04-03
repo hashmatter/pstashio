@@ -8,8 +8,9 @@ service Scheduler {
 }
 
 message RegisterPeerRequest {
-	string location = 1;
-	repeated Block cached_blocks = 2;
+	string ip = 1;
+	string location = 2;
+	repeated Block cached_blocks = 3;
 }
 
 message RegisterPeerResponse {
