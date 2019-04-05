@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	pb "github.com/hashmatter/pstashio/pb"
 	"google.golang.org/grpc"
 	"log"
@@ -12,26 +11,15 @@ const (
 	port = ":8080"
 )
 
-type server struct{}
-
-func (*server) RegisterPeer(ctx context.Context, req *pb.RegisterPeerRequest) (*pb.RegisterPeerResponse, error) {
-	log.Println("Received peer request: ", req)
-	return &pb.RegisterPeerResponse{Status: "OK"}, nil
-}
-
-func (*server) GetProviders(ctx context.Context, req *pb.GetProvidersRequest) (*pb.GetProvidersResponse, error) {
-	log.Println("Received %v", req)
-	return &pb.GetProvidersResponse{}, nil
-
-}
-
 func main() {
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatal(err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterSchedulerServer(s, &server{})
+
+	serverCtx := newServerCtx()
+	pb.RegisterSchedulerServer(s, serverCtx)
 
 	go func() {
 		if err := s.Serve(lis); err != nil {

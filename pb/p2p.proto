@@ -17,8 +17,11 @@ message RegisterPeerResponse {
 	string status = 1;
 }
 
+// the list of cached blocks is provided when requesting a new resource so that
+// the tracker can decide which blocks to replicate besides the resource blocks.
 message GetProvidersRequest {
 	string resource_id = 1;
+	repeated Block cached_blocks = 2;
 }
 
 message GetProvidersResponse {
