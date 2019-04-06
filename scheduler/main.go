@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	pb "github.com/hashmatter/pstashio/pb"
 	"google.golang.org/grpc"
 	"log"
@@ -28,5 +29,11 @@ func main() {
 	}()
 
 	log.Println("Server listening on port", port)
+
+	ds, err := addResource("./utils/resource.dat")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	select {}
 }

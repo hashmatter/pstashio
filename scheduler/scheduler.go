@@ -6,6 +6,17 @@ import (
 	"log"
 )
 
+// scheduler parameters
+const (
+	// size of the blocks in kb
+	blockSize = 256
+	// number of continguous blocks a peer will be responsible to provide
+	blocksPeer = 10
+	// obcurity factor is the number of extra (i.e. not requested) resources the
+	// peer will request (some) blocks from
+	obsFactor = 4
+)
+
 type server struct {
 	// a server keeps the current network state
 	state *netstate
@@ -25,13 +36,6 @@ func (*server) RegisterPeer(ctx context.Context, req *pb.RegisterPeerRequest) (*
 
 func (*server) GetProviders(ctx context.Context, req *pb.GetProvidersRequest) (*pb.GetProvidersResponse, error) {
 	log.Printf("GetProviders (%v)\n", req)
-
-	// checks the state of the peer
-
-	// caclulates which blocks to replicate and from whom to provide plausible
-	// deniability
-
-	// creates replications manifest based on resources
 
 	return &pb.GetProvidersResponse{}, nil
 }
