@@ -35,6 +35,8 @@ type server struct {
 	dag ipld.DAGService
 	// a block service stores the raw data alongside with the block CIDs
 	blocks bservice.BlockService
+	// cids of the resource roots stored in the blockstore
+	resourceRoots []ipld.Node
 }
 
 func newServerCtx() *server {
@@ -67,12 +69,13 @@ func (s *server) addResource(path string) (ipld.Node, error) {
 		return dag.NodeWithData(nil), err
 	}
 
-	cid, err := createDag(fd, s.dag, blockSize)
+	node, err := createDag(fd, s.dag, blockSize)
 	if err != nil {
 		return dag.NodeWithData(nil), err
 	}
 
-	return cid, nil
+	s.resourceRoots = append(s.resourceRoots, node)
+	return node, nil
 }
 
 func createDag(r io.Reader, dagServ ipld.DAGService, bsize int) (ipld.Node, error) {

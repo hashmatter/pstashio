@@ -4,12 +4,14 @@ import (
 	"context"
 	pb "github.com/hashmatter/pstashio/pb"
 	"google.golang.org/grpc"
+	"io/ioutil"
 	"log"
 	"net"
 )
 
 const (
-	port = ":8080"
+	port           = ":8080"
+	resources_path = "./utils/"
 )
 
 func main() {
@@ -32,22 +34,24 @@ func main() {
 
 	log.Println("Server listening on port", port)
 
-	node, err := server.addResource("./utils/resource.dat")
-	if err != nil {
-		log.Fatal(err)
-	}
+	// loads all the blocks into the server's blockstore asynchronously
+	go func() {
+		// get all files in resource path
+		rs, _ := ioutil.ReadDir(resources_path)
+		for _, r := range rs {
+			server.addResource(resources_path + r.Name())
+		}
 
-	root, err := server.dag.Get(ctx, node.Cid())
-	if err != nil {
-		log.Fatal(err)
-	}
+		// ranges through all resources
+		for _, r := range server.resourceRoots {
+			// ranges through all resource blocks
+			for _, l := range r.Links() {
+				blk, _ := server.blocks.GetBlock(ctx, l.Cid)
+				log.Println(l.Cid, blk.RawData())
+			}
+		}
 
-	for _, l := range root.Links() {
-		log.Println(l.Name)
-		blk, _ := server.blocks.GetBlock(ctx, l.Cid)
-		log.Println(blk.RawData())
-		log.Println("-------")
-	}
+	}()
 
 	select {}
 }
