@@ -2,7 +2,8 @@ package main
 
 import (
 	"errors"
-	pb "github.com/hashmatter/pstashio/pb"
+	//	pb "github.com/hashmatter/pstashio/pb"
+	cid "github.com/ipfs/go-cid"
 )
 
 var noPeerErr = errors.New("Peer not found")
@@ -51,20 +52,10 @@ func (s *netstate) addBlockPeer(pid string, bid string) error {
 	return nil
 }
 
-// returns the list of IDs of the blocks of a given resource
-func (s *netstate) listBlocks(rid string) ([]string, error) {
-	lst := s.resourceList[rid]
-	// resource does not exist
-	if lst == nil {
-		return []string{}, noResourceErr
-	}
-	return lst, nil
-}
-
 type peer struct {
 	id           string
 	ip           string
-	cachedBlocks *[]pb.Block
+	cachedBlocks []cid.Cid
 }
 
 // (time) efficient block/peer mapping

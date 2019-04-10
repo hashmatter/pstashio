@@ -1,122 +1,98 @@
 package main
 
 import (
-	"context"
-	pb "github.com/hashmatter/pstashio/pb"
-	bservice "github.com/ipfs/go-blockservice"
-	//	cid "github.com/ipfs/go-cid"
-	ds "github.com/ipfs/go-datastore"
-	syncds "github.com/ipfs/go-datastore/sync"
-	bstore "github.com/ipfs/go-ipfs-blockstore"
-	offline "github.com/ipfs/go-ipfs-exchange-offline"
-	ipld "github.com/ipfs/go-ipld-format"
-	dag "github.com/ipfs/go-merkledag"
-	"io"
-	"log"
-	"os"
+//	"log"
 )
 
-// scheduler parameters
-const (
-	// size of the blocks in kb
-	blockSize = 256
-	// number of continguous blocks a peer will be responsible to provide
-	blocksPeer = 10
-	// obcurity factor is the number of extra (i.e. not requested) resources the
-	// peer will request (some) blocks from
-	obsFactor = 4
-)
+type peerId string
+type blockId string
+type resourceId string
 
-type server struct {
-	// a server keeps the current network state
-	state *netstate
-	// a dag service keeps the metadata of resources stored in the network, ie.
-	// how the resources are split into blocks and its links
-	dag ipld.DAGService
-	// a block service stores the raw data alongside with the block CIDs
-	blocks bservice.BlockService
-	// cids of the resource roots stored in the blockstore
-	resourceRoots []ipld.Node
+type Peer struct {
+	id peerId
 }
 
-func newServerCtx() *server {
-	bs := bstore.NewBlockstore(syncds.MutexWrap(ds.NewMapDatastore()))
-	bserv := bservice.New(bs, offline.Exchange(bs))
-	dserv := dag.NewDAGService(bserv)
+type Block struct {
+	id blockId
+}
 
-	return &server{
-		state:  newState(),
-		dag:    dserv,
-		blocks: bserv,
+type Resource struct {
+	id     resourceId
+	blocks []blockId
+}
+
+type PeerBlock struct {
+	peerId  peerId
+	blockId blockId
+}
+
+type schedulerParams struct {
+	obfuscationP float64
+	spreadP      float64
+}
+
+type State map[peerId]map[blockId]resourceId
+
+func (s *State) addPeerBlockEntry(p Peer, b Block, rid resourceId) {
+	if (*s)[p.id] == nil {
+		(*s)[p.id] = make(map[blockId]resourceId)
 	}
+	(*s)[p.id][b.id] = rid
 }
 
-// register peers in the network
-func (*server) RegisterPeer(ctx context.Context, req *pb.RegisterPeerRequest) (*pb.RegisterPeerResponse, error) {
-	log.Println("Received peer request: ", req)
-	return &pb.RegisterPeerResponse{Status: "OK"}, nil
+// get providers returns a set of blocks and peers to replicate based on the
+// requester peer neighborhood, its cached blocks and the resourceId to request.
+// this is entry point for the gist of the replication algorithm used by the
+// scheduler
+func getProviders(neighborPeers []Peer, cachedBlocks []Block,
+	resource []Resource, netState State, params schedulerParams) ([]PeerBlock, error) {
+
+	// get all PeerBlocks from neighbor peers
+	neighPbs := filterPeersBlocks(neighborPeers, netState)
+
+	// gets all PeerBlocks from its neighbor peers that are not yet cached locally
+	nonCachedNeighPbs := filterBlocks(neighPbs, cachedBlocks)
+
+	// select final PeerBlocks based on configuration params and requested
+	// resource
+	rpbs := getBlocksResourcePeers(resource, neighborPeers)
+	finalPbs := schedule(rpbs, nonCachedNeighPbs, params.obfuscationP, params.spreadP)
+
+	return finalPbs, nil
 }
 
-func (*server) GetProviders(ctx context.Context, req *pb.GetProvidersRequest) (*pb.GetProvidersResponse, error) {
-	log.Printf("GetProviders (%v)\n", req)
+// returns all PeerBlocks from neighbor peers in a given state
+func filterPeersBlocks(peers []Peer, state State) []PeerBlock {
+	pbs := []PeerBlock{}
 
-	return &pb.GetProvidersResponse{}, nil
-}
-
-func (s *server) addResource(path string) (ipld.Node, error) {
-	fd, err := os.Open(path)
-	if err != nil {
-		return dag.NodeWithData(nil), err
-	}
-
-	node, err := createDag(fd, s.dag, blockSize)
-	if err != nil {
-		return dag.NodeWithData(nil), err
-	}
-
-	s.resourceRoots = append(s.resourceRoots, node)
-	return node, nil
-}
-
-func createDag(r io.Reader, dagServ ipld.DAGService, bsize int) (ipld.Node, error) {
-	bf := make([]byte, bsize)
-	nodes := []*dag.ProtoNode{}
-
-	for {
-		_, err := io.ReadFull(r, bf)
-		if err == io.EOF {
-			break
-		}
-
-		if err == io.ErrUnexpectedEOF {
-			break
-		}
-
-		if err != nil {
-			return dag.NodeWithData(nil), err
-		}
-
-		// needed because for... does not copy pointer contents
-		b := make([]byte, bsize)
-		copy(b, bf)
-		n := dag.NodeWithData(b)
-		nodes = append(nodes, n)
-	}
-
-	ctx := context.Background()
-	root := dag.NodeWithData(nil)
-
-	for _, n := range nodes {
-		root.AddNodeLink(n.Cid().String(), n)
-		err := dagServ.Add(ctx, n)
-		if err != nil {
-			return dag.NodeWithData(nil), err
+	for pid, _ := range state {
+		for _, p := range peers {
+			if pid == p.id {
+				for blkId, _ := range state[pid] {
+					pb := PeerBlock{peerId: pid, blockId: blkId}
+					pbs = append(pbs, pb)
+				}
+				break
+			}
 		}
 	}
 
-	err := dagServ.Add(ctx, root)
-	if err != nil {
-		return dag.NodeWithData(nil), err
-	}
-	return root, nil
+	return pbs
+}
+
+// returns all PeerBlocks which contain blocks that are not part of the Block
+// slice
+func filterBlocks(pbs []PeerBlock, bs []Block) []PeerBlock {
+	return nil
+}
+
+// get all PeerBlocks from a given resource and set of peers
+func getBlocksResourcePeers(resource []Resource, peers []Peer) []PeerBlock {
+	return nil
+}
+
+// given a set of resource peer blocks a set of not cached Peer Blocks, schedule
+// the replication according to the parameters
+func schedule(resourcePbs []PeerBlock, noCachedPbs []PeerBlock, obsP, spreadP float64) []PeerBlock {
+	return nil
 }

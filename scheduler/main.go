@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	pb "github.com/hashmatter/pstashio/pb"
 	"google.golang.org/grpc"
 	"io/ioutil"
@@ -15,8 +14,6 @@ const (
 )
 
 func main() {
-	ctx := context.Background()
-
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatal(err)
@@ -28,7 +25,7 @@ func main() {
 
 	go func() {
 		if err := s.Serve(lis); err != nil {
-			log.Fatal("failed to serve %v", err)
+			log.Fatal("failed to serve", err)
 		}
 	}()
 
@@ -40,17 +37,8 @@ func main() {
 		rs, _ := ioutil.ReadDir(resources_path)
 		for _, r := range rs {
 			server.addResource(resources_path + r.Name())
+			log.Println("added", r.Name())
 		}
-
-		// ranges through all resources
-		for _, r := range server.resourceRoots {
-			// ranges through all resource blocks
-			for _, l := range r.Links() {
-				blk, _ := server.blocks.GetBlock(ctx, l.Cid)
-				log.Println(l.Cid, blk.RawData())
-			}
-		}
-
 	}()
 
 	select {}
